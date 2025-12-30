@@ -100,9 +100,36 @@
             border-left-color: #ef4444;
         }
 
-        .site-card.checking {
+        .site-card.timeout {
             border-left-color: #f59e0b;
         }
+
+        .site-card.warning {
+            border-left-color: #f59e0b;
+            background: #fffbeb;
+        }
+
+        .site-card.degraded {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+        }
+
+        .issues-list {
+            margin-top: 10px;
+            padding: 10px;
+            background: #fef2f2;
+            border-radius: 6px;
+            border-left: 3px solid #ef4444;
+        }
+
+        .issue-item {
+            font-size: 12px;
+            color: #7f1d1d;
+            margin: 4px 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }}
 
         .site-name {
             font-size: 18px;
@@ -511,45 +538,103 @@
             }
         };
 
-        // Verificador de sites
+        // Verificador de sites com múltiplas camadas
         async function checkSite(site) {
+            const checks = {
+                connectivity: { status: 'pending', time: 0 },
+                performance: { status: 'pending', time: 0 },
+                ssl: { status: 'pending', valid: false },
+                overall: { status: 'checking', responseTime: 0, issues: [] }
+            };
+            
             const startTime = Date.now();
             
             try {
-                // Tentativa de fetch com timeout
+                // Camada 1: Verificação de Conectividade
                 const controller = new AbortController();
                 const timeout = setTimeout(() => controller.abort(), 10000);
                 
                 const response = await fetch(site.url, {
                     method: 'HEAD',
-                    mode: 'no-cors', // Permite verificar mesmo com CORS
+                    mode: 'no-cors',
                     signal: controller.signal
                 });
                 
                 clearTimeout(timeout);
                 const responseTime = Date.now() - startTime;
                 
-                // Com no-cors, sempre retorna opaque response
-                // Consideramos online se não deu erro
-                DataManager.saveCheck(site.url, 'online', responseTime);
+                checks.connectivity.status = 'ok';
+                checks.connectivity.time = responseTime;
+                
+                // Camada 2: Verificação de Performance
+                if (responseTime > 5000) {
+                    checks.performance.status = 'critical';
+                    checks.overall.issues.push('Tempo de resposta crítico (> 5s)');
+                } else if (responseTime > 3000) {
+                    checks.performance.status = 'warning';
+                    checks.overall.issues.push('Tempo de resposta lento (> 3s)');
+                } else {
+                    checks.performance.status = 'ok';
+                }
+                checks.performance.time = responseTime;
+                
+                // Camada 3: Verificação de SSL (limitado no frontend)
+                // Verificamos se a URL usa HTTPS
+                if (site.url.startsWith('https://')) {
+                    checks.ssl.status = 'ok';
+                    checks.ssl.valid = true;
+                } else {
+                    checks.ssl.status = 'warning';
+                    checks.ssl.valid = false;
+                    checks.overall.issues.push('Site não usa HTTPS');
+                }
+                
+                // Determinar status geral
+                let overallStatus = 'online';
+                if (checks.performance.status === 'critical') {
+                    overallStatus = 'degraded';
+                } else if (checks.performance.status === 'warning' || checks.ssl.status === 'warning') {
+                    overallStatus = 'warning';
+                }
+                
+                DataManager.saveCheck(site.url, overallStatus, responseTime);
+                
                 return {
-                    status: 'online',
+                    status: overallStatus,
                     responseTime,
-                    lastCheck: new Date()
+                    lastCheck: new Date(),
+                    checks,
+                    issues: checks.overall.issues
                 };
                 
             } catch (error) {
                 const responseTime = Date.now() - startTime;
                 
-                // Se o erro for de timeout ou rede, consideramos offline
-                const status = error.name === 'AbortError' ? 'timeout' : 'offline';
+                checks.connectivity.status = 'failed';
+                checks.connectivity.time = responseTime;
+                
+                // Determinar tipo de falha
+                let status = 'offline';
+                let issues = [];
+                
+                if (error.name === 'AbortError') {
+                    status = 'timeout';
+                    issues.push('Timeout: Site não respondeu em 10s');
+                } else if (error.message.includes('Failed to fetch')) {
+                    issues.push('Erro de rede: Não foi possível conectar');
+                } else {
+                    issues.push(`Erro: ${error.message}`);
+                }
+                
                 DataManager.saveCheck(site.url, status, responseTime);
                 
                 return {
                     status,
                     responseTime,
                     lastCheck: new Date(),
-                    error: error.message
+                    error: error.message,
+                    checks,
+                    issues
                 };
             }
         }
@@ -597,10 +682,21 @@
                 
                 const statusText = {
                     'online': '<i data-lucide="check-circle" style="display: inline-block; width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>Online',
+                    'warning': '<i data-lucide="alert-triangle" style="display: inline-block; width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>Aviso',
+                    'degraded': '<i data-lucide="alert-circle" style="display: inline-block; width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>Degradado',
                     'offline': '<i data-lucide="x-circle" style="display: inline-block; width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>Offline',
                     'timeout': '<i data-lucide="clock" style="display: inline-block; width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>Timeout',
                     'checking': '<i data-lucide="loader" style="display: inline-block; width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>Verificando...'
                 }[status.status];
+                
+                // Gerar lista de issues se houver
+                let issuesHTML = '';
+                if (status.issues && status.issues.length > 0) {
+                    const issueItems = status.issues.map(issue => 
+                        `<div class="issue-item"><i data-lucide="alert-circle" style="width: 12px; height: 12px;"></i>${issue}</div>`
+                    ).join('');
+                    issuesHTML = `<div class="issues-list">${issueItems}</div>`;
+                }
                 
                 // Gerar heatmap
                 const hourlyData = DataManager.getHourlyData(site.url, 24);
@@ -626,6 +722,7 @@
                         <div>Uptime (24h): ${uptime}%</div>
                         <div>Última verificação: ${new Date(status.lastCheck).toLocaleTimeString('pt-BR')}</div>
                     </div>
+                    ${issuesHTML}
                     <div class="uptime-heatmap" onclick="event.stopPropagation()">
                         <button onclick="window.location.href='details.html?url=${encodeURIComponent(site.url)}'" style="background: #667eea; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; margin-bottom: 10px; width: 100%; transition: all 0.2s;" onmouseover="this.style.background='#5568d3'" onmouseout="this.style.background='#667eea'">Ver Detalhes Completos</button>
                         <div class="heatmap-label">Histórico Últimas 24h</div>
