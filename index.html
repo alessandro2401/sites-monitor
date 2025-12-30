@@ -306,8 +306,16 @@
 <body>
     <div class="container">
         <header>
-            <h1><i data-lucide="activity" style="display: inline-block; width: 32px; height: 32px; vertical-align: middle; margin-right: 10px; color: #667eea;"></i>Painel de Monitoramento</h1>
-            <p class="subtitle">Administradora Mutual - Monitoramento Centralizado de Sites</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                <div>
+                    <h1><i data-lucide="activity" style="display: inline-block; width: 32px; height: 32px; vertical-align: middle; margin-right: 10px; color: #667eea;"></i>Painel de Monitoramento</h1>
+                    <p class="subtitle">Administradora Mutual - Monitoramento Centralizado de Sites</p>
+                </div>
+                <button onclick="window.location.href='test-functionality.html'" style="background: #667eea; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;" onmouseover="this.style.background='#5568d3'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#667eea'; this.style.transform='translateY(0)'">
+                    <i data-lucide="check-circle-2" style="width: 16px; height: 16px;"></i>
+                    Testes de Funcionalidade
+                </button>
+            </div>
         </header>
 
         <div class="stats">
@@ -574,7 +582,14 @@
 
                 const card = document.createElement('div');
                 card.className = `site-card ${status.status}`;
-                card.onclick = () => window.open(site.url, '_blank');
+                
+                // Adicionar botão de detalhes
+                card.onclick = (e) => {
+                    // Se clicou no card mas não em um link ou botão, vai para detalhes
+                    if (e.target.tagName !== 'A' && e.target.tagName !== 'BUTTON' && !e.target.closest('button')) {
+                        window.location.href = `details.html?url=${encodeURIComponent(site.url)}`;
+                    }
+                };
                 
                 const statusText = {
                     'online': '<i data-lucide="check-circle" style="display: inline-block; width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>Online',
@@ -608,6 +623,7 @@
                         <div>Última verificação: ${new Date(status.lastCheck).toLocaleTimeString('pt-BR')}</div>
                     </div>
                     <div class="uptime-heatmap" onclick="event.stopPropagation()">
+                        <button onclick="window.location.href='details.html?url=${encodeURIComponent(site.url)}'" style="background: #667eea; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; margin-bottom: 10px; width: 100%; transition: all 0.2s;" onmouseover="this.style.background='#5568d3'" onmouseout="this.style.background='#667eea'">Ver Detalhes Completos</button>
                         <div class="heatmap-label">Histórico Últimas 24h</div>
                         <div class="heatmap-bars">
                             ${heatmapBars}

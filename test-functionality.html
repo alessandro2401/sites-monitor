@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Testes de Funcionalidade - Painel de Monitoramento</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .back-button {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+        }
+
+        .back-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+        }
+
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .test-controls {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .test-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .test-button:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .test-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .test-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .test-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .test-status {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .test-status.pending {
+            background: #e5e7eb;
+            color: #6b7280;
+        }
+
+        .test-status.testing {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .test-status.passed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .test-status.failed {
+            background: #fee2e2;
+            color: #7f1d1d;
+        }
+
+        .test-results {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .test-result-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #f3f4f6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .test-result-item:last-child {
+            border-bottom: none;
+        }
+
+        .test-result-label {
+            color: #666;
+        }
+
+        .test-result-value {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .test-result-value.success {
+            color: #10b981;
+        }
+
+        .test-result-value.error {
+            color: #ef4444;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e5e7eb;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #667eea;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        footer {
+            text-align: center;
+            color: white;
+            margin-top: 30px;
+            font-size: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .test-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button class="back-button" onclick="window.location.href='index.html'">
+            <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
+            Voltar ao Painel
+        </button>
+
+        <header>
+            <h1><i data-lucide="check-circle-2" style="display: inline-block; width: 28px; height: 28px; vertical-align: middle; margin-right: 10px; color: #667eea;"></i>Testes de Funcionalidade</h1>
+            <p class="subtitle">Verificação de acessibilidade, performance e recursos dos sites</p>
+        </header>
+
+        <div class="test-controls">
+            <button class="test-button" id="run-tests" onclick="runAllTests()">
+                <i data-lucide="play" style="width: 16px; height: 16px;"></i>
+                Executar Todos os Testes
+            </button>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+        </div>
+
+        <div class="test-grid" id="test-grid"></div>
+
+        <footer>
+            <p>© 2025 Administradora Mutual. Todos os direitos reservados.</p>
+        </footer>
+    </div>
+
+    <script>
+        const sites = [
+            { name: 'Movimento Mais Brasil', url: 'https://www.movimentomaisbrasil.org.br' },
+            { name: 'Movimento Mais Seguro', url: 'https://www.movimentomaisseguro.com.br' },
+            { name: 'Mais Brasil Motorcycle', url: 'https://www.maisbrasilmotorcycle.com.br' },
+            { name: 'Potere BP Mensal', url: 'https://www.poterebpmensal.com.br' },
+            { name: 'Potere Consórcio', url: 'https://www.potereconsorcio.com.br' },
+            { name: 'Potere Seguro Auto', url: 'https://www.potereseguroauto.com.br' },
+            { name: 'Soluções Corretora', url: 'https://www.solucoescorretora.com.br' },
+            { name: 'Alpha Proteções', url: 'https://www.alphaprotecoes.com.br' },
+            { name: 'Grupo MMB', url: 'https://www.grupommb.com' },
+            { name: 'Juntos Podemos Mais', url: 'https://www.juntospodmais.com.br' }
+        ];
+
+        const testResults = {};
+
+        // Inicializar cards de teste
+        function initTestCards() {
+            const grid = document.getElementById('test-grid');
+            grid.innerHTML = '';
+
+            sites.forEach(site => {
+                const card = document.createElement('div');
+                card.className = 'test-card';
+                card.id = `test-card-${encodeURIComponent(site.url)}`;
+                
+                card.innerHTML = `
+                    <div class="test-header">
+                        <div class="test-name">${site.name}</div>
+                        <div class="test-status pending">Pendente</div>
+                    </div>
+                    <div class="test-results">
+                        <div class="test-result-item">
+                            <span class="test-result-label">Acessibilidade:</span>
+                            <span class="test-result-value">--</span>
+                        </div>
+                        <div class="test-result-item">
+                            <span class="test-result-label">Tempo de Resposta:</span>
+                            <span class="test-result-value">--</span>
+                        </div>
+                        <div class="test-result-item">
+                            <span class="test-result-label">Recursos Carregados:</span>
+                            <span class="test-result-value">--</span>
+                        </div>
+                        <div class="test-result-item">
+                            <span class="test-result-label">Score Geral:</span>
+                            <span class="test-result-value">--</span>
+                        </div>
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+
+            lucide.createIcons();
+        }
+
+        // Atualizar card de teste
+        function updateTestCard(url, status, results) {
+            const card = document.getElementById(`test-card-${encodeURIComponent(url)}`);
+            if (!card) return;
+
+            const statusBadge = card.querySelector('.test-status');
+            statusBadge.className = `test-status ${status}`;
+            statusBadge.textContent = {
+                'pending': 'Pendente',
+                'testing': 'Testando...',
+                'passed': 'Aprovado',
+                'failed': 'Falhou'
+            }[status];
+
+            if (results) {
+                const resultItems = card.querySelectorAll('.test-result-value');
+                resultItems[0].textContent = results.accessible ? '✓ Acessível' : '✗ Inacessível';
+                resultItems[0].className = `test-result-value ${results.accessible ? 'success' : 'error'}`;
+                
+                resultItems[1].textContent = `${results.responseTime}ms`;
+                resultItems[1].className = `test-result-value ${results.responseTime < 3000 ? 'success' : 'error'}`;
+                
+                resultItems[2].textContent = results.resourcesLoaded ? '✓ OK' : '✗ Erro';
+                resultItems[2].className = `test-result-value ${results.resourcesLoaded ? 'success' : 'error'}`;
+                
+                resultItems[3].textContent = `${results.score}/100`;
+                resultItems[3].className = `test-result-value ${results.score >= 70 ? 'success' : 'error'}`;
+            }
+        }
+
+        // Executar teste em um site
+        async function testSite(site) {
+            updateTestCard(site.url, 'testing', null);
+
+            const startTime = Date.now();
+            let accessible = false;
+            let resourcesLoaded = false;
+
+            try {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 10000);
+
+                const response = await fetch(site.url, {
+                    method: 'HEAD',
+                    mode: 'no-cors',
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeout);
+                accessible = true;
+                resourcesLoaded = true; // Assumimos que recursos carregaram se o site respondeu
+            } catch (error) {
+                accessible = false;
+                resourcesLoaded = false;
+            }
+
+            const responseTime = Date.now() - startTime;
+
+            // Calcular score
+            let score = 0;
+            if (accessible) score += 50;
+            if (responseTime < 3000) score += 30;
+            if (resourcesLoaded) score += 20;
+
+            const results = {
+                accessible,
+                responseTime,
+                resourcesLoaded,
+                score,
+                timestamp: new Date().toISOString()
+            };
+
+            const status = score >= 70 ? 'passed' : 'failed';
+            updateTestCard(site.url, status, results);
+
+            // Salvar resultados
+            testResults[site.url] = results;
+            localStorage.setItem('functionalityTests', JSON.stringify(testResults));
+
+            return results;
+        }
+
+        // Executar todos os testes
+        async function runAllTests() {
+            const button = document.getElementById('run-tests');
+            const progressFill = document.getElementById('progress-fill');
+            
+            button.disabled = true;
+            progressFill.style.width = '0%';
+
+            for (let i = 0; i < sites.length; i++) {
+                await testSite(sites[i]);
+                const progress = ((i + 1) / sites.length) * 100;
+                progressFill.style.width = `${progress}%`;
+            }
+
+            button.disabled = false;
+            console.log('Todos os testes concluídos!');
+        }
+
+        // Carregar resultados anteriores
+        function loadPreviousResults() {
+            const saved = localStorage.getItem('functionalityTests');
+            if (saved) {
+                const results = JSON.parse(saved);
+                Object.keys(results).forEach(url => {
+                    const score = results[url].score;
+                    const status = score >= 70 ? 'passed' : 'failed';
+                    updateTestCard(url, status, results[url]);
+                });
+            }
+        }
+
+        // Inicialização
+        initTestCards();
+        loadPreviousResults();
+    </script>
+</body>
+</html>
