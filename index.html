@@ -153,6 +153,99 @@
             margin-top: 10px;
         }
 
+        .uptime-heatmap {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .heatmap-label {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .heatmap-bars {
+            display: flex;
+            gap: 2px;
+            height: 30px;
+            border-radius: 4px;
+            overflow: hidden;
+            background: #f3f4f6;
+        }
+
+        .heatmap-bar {
+            flex: 1;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .heatmap-bar.online {
+            background: #10b981;
+        }
+
+        .heatmap-bar.degraded {
+            background: #f59e0b;
+        }
+
+        .heatmap-bar.offline {
+            background: #ef4444;
+        }
+
+        .heatmap-bar.no-data {
+            background: #d1d5db;
+        }
+
+        .heatmap-bar:hover {
+            opacity: 0.8;
+            transform: scaleY(1.1);
+        }
+
+        .heatmap-tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 1000;
+            margin-bottom: 5px;
+        }
+
+        .heatmap-bar:hover .heatmap-tooltip {
+            opacity: 1;
+        }
+
+        .heatmap-legend {
+            display: flex;
+            gap: 15px;
+            margin-top: 8px;
+            font-size: 10px;
+            color: #666;
+            justify-content: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+
         .alerts {
             background: white;
             padding: 20px;
@@ -305,6 +398,49 @@
             getLastCheck: (url) => {
                 const history = DataManager.getHistory()[url] || [];
                 return history[history.length - 1];
+            },
+            
+            getHourlyData: (url, hours = 24) => {
+                const history = DataManager.getHistory()[url] || [];
+                const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
+                const recent = history.filter(h => new Date(h.timestamp) > cutoff);
+                
+                // Dividir em intervalos de 30 minutos (48 blocos para 24h)
+                const blocks = [];
+                const blockDuration = 30 * 60 * 1000; // 30 minutos em ms
+                const now = Date.now();
+                
+                for (let i = 0; i < 48; i++) {
+                    const blockEnd = now - (i * blockDuration);
+                    const blockStart = blockEnd - blockDuration;
+                    
+                    const checksInBlock = recent.filter(h => {
+                        const timestamp = new Date(h.timestamp).getTime();
+                        return timestamp >= blockStart && timestamp < blockEnd;
+                    });
+                    
+                    let status = 'no-data';
+                    let uptime = 0;
+                    
+                    if (checksInBlock.length > 0) {
+                        const onlineChecks = checksInBlock.filter(c => c.status === 'online').length;
+                        uptime = (onlineChecks / checksInBlock.length) * 100;
+                        
+                        if (uptime >= 95) status = 'online';
+                        else if (uptime >= 50) status = 'degraded';
+                        else status = 'offline';
+                    }
+                    
+                    blocks.unshift({
+                        start: new Date(blockStart),
+                        end: new Date(blockEnd),
+                        status,
+                        uptime: uptime.toFixed(1),
+                        checks: checksInBlock.length
+                    });
+                }
+                
+                return blocks;
             }
         };
 
@@ -392,6 +528,19 @@
                     'checking': '<i data-lucide="loader" style="display: inline-block; width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>Verificando...'
                 }[status.status];
                 
+                // Gerar heatmap
+                const hourlyData = DataManager.getHourlyData(site.url, 24);
+                const heatmapBars = hourlyData.map(block => {
+                    const timeStr = block.start.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    return `<div class="heatmap-bar ${block.status}">
+                        <div class="heatmap-tooltip">
+                            ${timeStr}<br>
+                            Uptime: ${block.uptime}%<br>
+                            Verificações: ${block.checks}
+                        </div>
+                    </div>`;
+                }).join('');
+                
                 card.innerHTML = `
                     <div class="site-name">${site.name}</div>
                     <a href="${site.url}" target="_blank" class="site-url" onclick="event.stopPropagation()">${site.url}</a>
@@ -402,6 +551,30 @@
                         <div>Tempo de resposta: ${status.responseTime}ms</div>
                         <div>Uptime (24h): ${uptime}%</div>
                         <div>Última verificação: ${new Date(status.lastCheck).toLocaleTimeString('pt-BR')}</div>
+                    </div>
+                    <div class="uptime-heatmap" onclick="event.stopPropagation()">
+                        <div class="heatmap-label">Histórico Últimas 24h</div>
+                        <div class="heatmap-bars">
+                            ${heatmapBars}
+                        </div>
+                        <div class="heatmap-legend">
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #10b981;"></div>
+                                <span>Online</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #f59e0b;"></div>
+                                <span>Degradado</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #ef4444;"></div>
+                                <span>Offline</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #d1d5db;"></div>
+                                <span>Sem dados</span>
+                            </div>
+                        </div>
                     </div>
                 `;
 
