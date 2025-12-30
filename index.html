@@ -82,6 +82,13 @@
             border-radius: 12px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             border-left: 4px solid #667eea;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .site-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+            cursor: pointer;
         }
 
         .site-card.online {
@@ -100,10 +107,16 @@
         }
 
         .site-url {
-            color: #666;
+            color: #667eea;
             font-size: 12px;
             margin-bottom: 15px;
             word-break: break-all;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .site-url:hover {
+            text-decoration: underline;
         }
 
         .status-badge {
@@ -279,10 +292,11 @@
 
                 const card = document.createElement('div');
                 card.className = `site-card ${status.online ? 'online' : 'offline'}`;
+                card.onclick = () => window.open(site.url, '_blank');
                 
                 card.innerHTML = `
                     <div class="site-name">${site.name}</div>
-                    <div class="site-url">${site.url}</div>
+                    <a href="${site.url}" target="_blank" class="site-url" onclick="event.stopPropagation()">${site.url}</a>
                     <div class="status-badge ${status.online ? 'online' : 'offline'}">
                         ${status.online ? '<i data-lucide="check-circle" style="display: inline-block; width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>Online' : '<i data-lucide="x-circle" style="display: inline-block; width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>Offline'}
                     </div>
