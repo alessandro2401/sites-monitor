@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Monitoramento - Administradora Mutual</title>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -345,6 +346,16 @@
     </div>
 
     <script>
+        // Configuração do EmailJS
+        const EMAILJS_CONFIG = {
+            publicKey: 'SR-CpFeoo1Tomezma',
+            serviceId: 'service_1kqwaee',
+            templateId: 'template_v4397ca'
+        };
+
+        // Inicializar EmailJS
+        emailjs.init(EMAILJS_CONFIG.publicKey);
+
         // Configuração dos sites
         const sites = [
             { name: 'Movimento Mais Brasil', url: 'https://www.movimentomaisbrasil.org.br' },
@@ -441,6 +452,50 @@
                 }
                 
                 return blocks;
+            },
+            
+            getAlertHistory: () => {
+                const data = localStorage.getItem('alertHistory');
+                return data ? JSON.parse(data) : {};
+            },
+            
+            saveAlert: (url, status) => {
+                const history = DataManager.getAlertHistory();
+                if (!history[url]) history[url] = [];
+                
+                history[url].push({
+                    timestamp: new Date().toISOString(),
+                    status,
+                    emailSent: false
+                });
+                
+                // Manter apenas últimos 50 alertas por site
+                if (history[url].length > 50) {
+                    history[url] = history[url].slice(-50);
+                }
+                
+                localStorage.setItem('alertHistory', JSON.stringify(history));
+            },
+            
+            canSendAlert: (url) => {
+                const history = DataManager.getAlertHistory()[url] || [];
+                if (history.length === 0) return true;
+                
+                // Verificar se já enviou alerta nos últimos 30 minutos
+                const lastAlert = history[history.length - 1];
+                const cooldownMinutes = 30;
+                const cooldownMs = cooldownMinutes * 60 * 1000;
+                const timeSinceLastAlert = Date.now() - new Date(lastAlert.timestamp).getTime();
+                
+                return timeSinceLastAlert > cooldownMs;
+            },
+            
+            markAlertSent: (url) => {
+                const history = DataManager.getAlertHistory();
+                if (history[url] && history[url].length > 0) {
+                    history[url][history[url].length - 1].emailSent = true;
+                    localStorage.setItem('alertHistory', JSON.stringify(history));
+                }
             }
         };
 
@@ -621,12 +676,61 @@
             lucide.createIcons();
         }
 
+        // Enviar alerta por email
+        async function sendEmailAlert(site, status) {
+            try {
+                const templateParams = {
+                    site_name: site.name,
+                    site_url: site.url,
+                    status: status.status.toUpperCase(),
+                    failure_time: new Date(status.lastCheck).toLocaleString('pt-BR'),
+                    response_time: status.responseTime
+                };
+
+                await emailjs.send(
+                    EMAILJS_CONFIG.serviceId,
+                    EMAILJS_CONFIG.templateId,
+                    templateParams
+                );
+
+                console.log(`✅ Email de alerta enviado para ${site.name}`);
+                DataManager.markAlertSent(site.url);
+            } catch (error) {
+                console.error(`❌ Erro ao enviar email para ${site.name}:`, error);
+            }
+        }
+
+        // Verificar mudança de status e enviar alerta
+        async function checkStatusChange(site, newStatus) {
+            const lastCheck = DataManager.getLastCheck(site.url);
+            
+            // Se não há verificação anterior, não enviar alerta
+            if (!lastCheck) return;
+            
+            // Detectar mudança de online para offline
+            const wasOnline = lastCheck.status === 'online';
+            const isOffline = newStatus.status === 'offline' || newStatus.status === 'timeout';
+            
+            if (wasOnline && isOffline) {
+                // Verificar se pode enviar alerta (cooldown)
+                if (DataManager.canSendAlert(site.url)) {
+                    console.log(`⚠️ Site ${site.name} ficou offline! Enviando alerta...`);
+                    DataManager.saveAlert(site.url, newStatus.status);
+                    await sendEmailAlert(site, newStatus);
+                }
+            }
+        }
+
         // Verificar todos os sites
         async function checkAllSites() {
             console.log('Iniciando verificação de todos os sites...');
             
             for (const site of sites) {
                 const result = await checkSite(site);
+                
+                // Verificar mudança de status antes de atualizar
+                await checkStatusChange(site, result);
+                
                 siteStatus[site.url] = {
                     ...result,
                     lastCheck: result.lastCheck
