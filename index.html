@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Monitoramento - Administradora Mutual</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         * {
             margin: 0;
@@ -199,7 +200,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>🔍 Painel de Monitoramento</h1>
+            <h1><i data-lucide="activity" style="display: inline-block; width: 32px; height: 32px; vertical-align: middle; margin-right: 10px; color: #667eea;"></i>Painel de Monitoramento</h1>
             <p class="subtitle">Administradora Mutual - Monitoramento Centralizado de Sites</p>
         </header>
 
@@ -222,13 +223,13 @@
             </div>
         </div>
 
-        <h2 style="color: white; margin-bottom: 20px;">📊 Status dos Sites</h2>
+        <h2 style="color: white; margin-bottom: 20px;"><i data-lucide="bar-chart-2" style="display: inline-block; width: 24px; height: 24px; vertical-align: middle; margin-right: 8px;"></i>Status dos Sites</h2>
         <div class="sites-grid" id="sites-grid"></div>
 
         <div class="alerts">
-            <h2>⚠️ Alertas Recentes</h2>
+            <h2><i data-lucide="alert-triangle" style="display: inline-block; width: 20px; height: 20px; vertical-align: middle; margin-right: 8px; color: #f59e0b;"></i>Alertas Recentes</h2>
             <div id="alerts-container">
-                <div class="no-alerts">✅ Nenhum alerta no momento</div>
+                <div class="no-alerts"><i data-lucide="check-circle" style="display: inline-block; width: 16px; height: 16px; vertical-align: middle; margin-right: 5px;"></i>Nenhum alerta no momento</div>
             </div>
         </div>
 
@@ -283,7 +284,7 @@
                     <div class="site-name">${site.name}</div>
                     <div class="site-url">${site.url}</div>
                     <div class="status-badge ${status.online ? 'online' : 'offline'}">
-                        ${status.online ? '🟢 Online' : '🔴 Offline'}
+                        ${status.online ? '<i data-lucide="check-circle" style="display: inline-block; width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>Online' : '<i data-lucide="x-circle" style="display: inline-block; width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>Offline'}
                     </div>
                     <div class="status-info">
                         <div>Tempo de resposta: ${status.responseTime}ms</div>
@@ -304,7 +305,11 @@
 
         // Atualizar dashboard a cada 30 segundos
         updateDashboard();
-        setInterval(updateDashboard, 30000);
+        lucide.createIcons();
+        setInterval(() => {
+            updateDashboard();
+            lucide.createIcons();
+        }, 30000);
 
         // Simular alertas
         function updateAlerts() {
@@ -312,7 +317,8 @@
             const offlineSites = sites.filter(s => !siteStatus[s.url].online);
 
             if (offlineSites.length === 0) {
-                alertsContainer.innerHTML = '<div class="no-alerts">✅ Nenhum alerta no momento</div>';
+                alertsContainer.innerHTML = '<div class="no-alerts"><i data-lucide="check-circle" style="display: inline-block; width: 16px; height: 16px; vertical-align: middle; margin-right: 5px;"></i>Nenhum alerta no momento</div>';
+                lucide.createIcons();
                 return;
             }
 
@@ -320,7 +326,7 @@
             offlineSites.forEach(site => {
                 alertsHTML += `
                     <div class="alert-item">
-                        <div class="alert-title">🚨 ${site.name} - OFFLINE</div>
+                        <div class="alert-title"><i data-lucide="alert-circle" style="display: inline-block; width: 16px; height: 16px; vertical-align: middle; margin-right: 5px; color: #ef4444;"></i>${site.name} - OFFLINE</div>
                         <div class="alert-time">Detectado em ${new Date().toLocaleString('pt-BR')}</div>
                     </div>
                 `;
@@ -330,7 +336,10 @@
         }
 
         updateAlerts();
-        setInterval(updateAlerts, 60000);
+        setInterval(() => {
+            updateAlerts();
+            lucide.createIcons();
+        }, 60000);
     </script>
 </body>
 </html>
