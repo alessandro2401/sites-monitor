@@ -6,10 +6,15 @@ import { Dashboard } from './pages/Dashboard'
 import { Sites } from './pages/Sites'
 import { Alerts } from './pages/Alerts'
 import { trpc, trpcClient } from './lib/trpc'
+import { AuthProvider } from './contexts/AuthContext'
+import Login from './pages/Login'
+import { useAuth } from './contexts/AuthContext'
 
 const queryClient = new QueryClient()
 
-export default function App() {
+function ProtectedApp() {
+  const { isAuthenticated } = useAuth()
+  if (!isAuthenticated) return <Login />
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
@@ -23,5 +28,13 @@ export default function App() {
         </Router>
       </QueryClientProvider>
     </trpc.Provider>
+  )
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <ProtectedApp />
+    </AuthProvider>
   )
 }
